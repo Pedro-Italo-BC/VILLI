@@ -190,11 +190,10 @@ iftColor computeMeanColor(
     }
 
     iftColor c = {0};
-    c.val[0] = y / count;
-    c.val[1] = cb / count;
-    c.val[2] = cr / count;
-
-    return c;
+    c.val[0] = y / (count * 1.0);
+    c.val[1] = cb / (count * 1.0);
+    c.val[2] = cr / (count * 1.0);
+    return iftYCbCrtoRGB(c,255); 
 }
 
 
