@@ -41,8 +41,10 @@ LIST_VILLI_PIECE_OBJ** getAllBorders(
 void writeVilliFile(
     const char *path,
     LIST_VILLI_PIECE_OBJ **lists,
-    int nlabels
+    int nlabels,
+    iftImage* img
 );
+
 
 int main(int argc, char const *argv[])
 {
@@ -60,26 +62,39 @@ int main(int argc, char const *argv[])
     const char *out_path = NULL;
 
     readImgInputs(args, &img, &label_img, &out_path);
-    iftDestroyArgs(&args);
+
+    int keepScratch = iftExistArg(args, "keepScratch");
 
     int nlabels;
     LIST_VILLI_PIECE_OBJ **lists =
         getAllBorders(img, label_img, &nlabels);
 
-    writeVilliFile(out_path, lists, nlabels);
+    char kpv_path[512];
+    char svg_path[512];
 
-    for(int i = 0; i < nlabels; i++) {
-        if(lists[i] != NULL)
+    snprintf(kpv_path, sizeof(kpv_path), "%s.kpv", out_path);
+    snprintf(svg_path, sizeof(svg_path), "%s.svg", out_path);
+
+    writeVilliFile(kpv_path, lists, nlabels, img);
+    villiToSVG(kpv_path, svg_path);
+
+    if (!keepScratch) {
+        remove(kpv_path);
+    }
+
+    for (int i = 0; i < nlabels; i++) {
+        if (lists[i] != NULL)
             villiDestructListPieceObj(lists[i]);
     }
+
     free(lists);
 
     iftDestroyImage(&img);
     iftDestroyImage(&label_img);
+    iftDestroyArgs(&args);
 
     return EXIT_SUCCESS;
 }
-
 
 void usage() {
     printf("\n--img <image>\n");
@@ -240,10 +255,11 @@ LIST_VILLI_PIECE_OBJ** getAllBorders(
 void writeVilliFile(
     const char *path,
     LIST_VILLI_PIECE_OBJ **lists,
-    int nlabels
+    int nlabels,
+    iftImage *img
 ) {
     FILE *f = fopen(path, "w");
-
+    fprintf(f, "%d,%d\n", img->xsize, img->ysize);
     for(int i = 0; i < nlabels; i++) {
         if(lists[i] == NULL) continue;
 
@@ -268,4 +284,79 @@ void writeVilliFile(
     }
 
     fclose(f);
+}
+
+void villiToSVG(const char *input_path, const char *output_path) {
+    FILE *in = fopen(input_path, "r");
+    FILE *out = fopen(output_path, "w");
+
+    if (!in || !out) {
+        fprintf(stderr, "Erro ao abrir arquivos\n");
+        return;
+    }
+
+    int width, height;
+
+    if (fscanf(in, "%d,%d\n", &width, &height) != 2) {
+        fprintf(stderr, "Erro ao ler dimensões\n");
+        fclose(in);
+        fclose(out);
+        return;
+    }
+
+    fprintf(out,
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+        "width=\"%d\" height=\"%d\">\n",
+        width, height);
+
+    char line[65536];
+
+    while (fgets(line, sizeof(line), in)) {
+        int thickness;
+        int r, g, b;
+
+        char *ptr = line;
+
+        if (sscanf(ptr, "%d %d,%d,%d",
+                   &thickness, &r, &g, &b) != 4)
+            continue;
+
+        while (*ptr && *ptr != ' ') ptr++;
+        while (*ptr == ' ') ptr++;
+
+        while (*ptr && *ptr != ' ') ptr++;
+        while (*ptr == ' ') ptr++;
+
+        fprintf(out,
+            "<path d=\"");
+
+        int x, y;
+        int first = 1;
+
+        while (sscanf(ptr, "%d,%d", &x, &y) == 2) {
+
+            if (first) {
+                fprintf(out, "M %d %d ", x, y);
+                first = 0;
+            } else {
+                fprintf(out, "L %d %d ", x, y);
+            }
+
+            while (*ptr && *ptr != ' ') ptr++;
+            while (*ptr == ' ') ptr++;
+        }
+
+        fprintf(out,
+            "Z\" "
+            "stroke=\"rgb(%d,%d,%d)\" "
+            "stroke-width=\"1.5\" "
+            "fill=\"rgb(%d,%d,%d)\"/>\n",
+            r, g, b,
+            r, g, b);
+    }
+
+    fprintf(out, "</svg>\n");
+
+    fclose(in);
+    fclose(out);
 }
