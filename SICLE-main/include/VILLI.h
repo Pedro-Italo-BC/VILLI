@@ -18,6 +18,7 @@ typedef struct LIST_VILLI_PIECE_OBJ {
     VILLI_PIECE_OBJ *last;
     int v_length;
     iftColor color;
+    int id;
 } LIST_VILLI_PIECE_OBJ;
 
 VILLI_PIECE_OBJ* villiCreatePieceObj(iftVoxel value);

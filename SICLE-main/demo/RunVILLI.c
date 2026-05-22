@@ -133,6 +133,7 @@ LIST_VILLI_PIECE_OBJ* traceBorder(
     iftVoxel current = start;
     int dir = 0;
 
+
     do {
         villiAddPieceObj(list,
             villiCreatePieceObj(current));
@@ -226,6 +227,7 @@ LIST_VILLI_PIECE_OBJ** getAllBorders(
 
         if(isBorderVoxel(label_img, p, A)) {
             lists[idx] = traceBorder(label_img, p, label);
+            lists[idx]->id = idx;
             lists[idx]->color =
                 computeMeanColor(orig, label_img, label);
 
@@ -248,11 +250,13 @@ void writeVilliFile(const char *path, LIST_VILLI_PIECE_OBJ **lists, int nlabels,
         LIST_VILLI_PIECE_OBJ *l = lists[i];
 
         fprintf(f, "1 ");
-        fprintf(f, "%d,%d,%d %d ",
+        fprintf(f, "%d,%d,%d %d %d ",
             l->color.val[0],
             l->color.val[1],
             l->color.val[2],
-            l->v_length);
+            l->v_length,
+            l->id
+        );
 
         VILLI_PIECE_OBJ *cur = l->first;
 
@@ -316,11 +320,15 @@ void villiToSVG(const char *input_path, const char *output_path)
 
         int consumed = 0;
 
-        if (sscanf(ptr, "%d %d,%d,%d %d%n", &thickness, &r, &g, &b, &pointsAmount, &consumed) != 5) {
+        int id = 0;
+
+        if (sscanf(ptr, "%d %d,%d,%d %d %d%n", &thickness, &r, &g, &b, &pointsAmount, &id, &consumed) != 6) {
             continue;
         }
 
         ptr += consumed;
+
+        fprintf(out, "<!-- %d -->", id);
 
         fprintf(out, "<path d=\"");
 
