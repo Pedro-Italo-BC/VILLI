@@ -20,30 +20,15 @@ void readImgInputs(
 
 bool isBorderVoxel(iftImage *label_img, int p_idx, iftAdjRel *A);
 
-LIST_VILLI_PIECE_OBJ* traceBorder(
-    iftImage *label_img,
-    int start_idx,
-    int label
-);
+LIST_VILLI_PIECE_OBJ* traceBorder(iftImage *label_img, int start_idx, int label);
 
-iftColor computeMeanColor(
-    iftImage *orig,
-    iftImage *label_img,
-    int label
-);
+void villiToSVG(const char *input_path, const char *output_path);
 
-LIST_VILLI_PIECE_OBJ** getAllBorders(
-    iftImage *orig,
-    iftImage *label_img,
-    int *nlabels_out
-);
+iftColor computeMeanColor(iftImage *orig, iftImage *label_img, int label);
 
-void writeVilliFile(
-    const char *path,
-    LIST_VILLI_PIECE_OBJ **lists,
-    int nlabels,
-    iftImage* img
-);
+LIST_VILLI_PIECE_OBJ** getAllBorders(iftImage *orig, iftImage *label_img, int *nlabels_out);
+
+void writeVilliFile(const char *path, LIST_VILLI_PIECE_OBJ **lists, int nlabels, iftImage* img);
 
 
 int main(int argc, char const *argv[])
@@ -100,6 +85,8 @@ void usage() {
     printf("\n--img <image>\n");
     printf("--labels <label image>\n");
     printf("--out <output txt>\n\n");
+    printf("Optional\n\n");
+    printf("--keepScratch\n");
 }
 
 void readImgInputs(
@@ -252,24 +239,20 @@ LIST_VILLI_PIECE_OBJ** getAllBorders(
     return lists;
 }
 
-void writeVilliFile(
-    const char *path,
-    LIST_VILLI_PIECE_OBJ **lists,
-    int nlabels,
-    iftImage *img
-) {
+void writeVilliFile(const char *path, LIST_VILLI_PIECE_OBJ **lists, int nlabels, iftImage *img) {
     FILE *f = fopen(path, "w");
-    fprintf(f, "%d,%d\n", img->xsize, img->ysize);
+    fprintf(f, "%d,%d,%d\n", img->xsize, img->ysize, nlabels);
     for(int i = 0; i < nlabels; i++) {
         if(lists[i] == NULL) continue;
 
         LIST_VILLI_PIECE_OBJ *l = lists[i];
 
         fprintf(f, "1 ");
-        fprintf(f, "%d,%d,%d ",
+        fprintf(f, "%d,%d,%d %d ",
             l->color.val[0],
             l->color.val[1],
-            l->color.val[2]);
+            l->color.val[2],
+            l->v_length);
 
         VILLI_PIECE_OBJ *cur = l->first;
 
@@ -285,56 +268,67 @@ void writeVilliFile(
 
     fclose(f);
 }
-
-void villiToSVG(const char *input_path, const char *output_path) {
+void villiToSVG(const char *input_path, const char *output_path)
+{
     FILE *in = fopen(input_path, "r");
     FILE *out = fopen(output_path, "w");
 
     if (!in || !out) {
         fprintf(stderr, "Erro ao abrir arquivos\n");
+
+        if (in) fclose(in);
+        if (out) fclose(out);
+
         return;
     }
 
-    int width, height;
+    int width, height, nLabels;
 
-    if (fscanf(in, "%d,%d\n", &width, &height) != 2) {
-        fprintf(stderr, "Erro ao ler dimensões\n");
+    if (fscanf(in, "%d,%d,%d\n",
+               &width,
+               &height,
+               &nLabels) != 3) {
+
+        fprintf(stderr, "Erro ao ler cabeçalho\n");
+
         fclose(in);
         fclose(out);
+
         return;
     }
 
     fprintf(out,
         "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-        "width=\"%d\" height=\"%d\">\n",
+        "width=\"%d\" height=\"%d\" "
+        "viewBox=\"0 0 %d %d\">\n",
+        width, height,
         width, height);
 
     char line[65536];
 
     while (fgets(line, sizeof(line), in)) {
+
         int thickness;
         int r, g, b;
+        int pointsAmount;
 
         char *ptr = line;
 
-        if (sscanf(ptr, "%d %d,%d,%d",
-                   &thickness, &r, &g, &b) != 4)
+        int consumed = 0;
+
+        if (sscanf(ptr, "%d %d,%d,%d %d%n", &thickness, &r, &g, &b, &pointsAmount, &consumed) != 5) {
             continue;
+        }
 
-        while (*ptr && *ptr != ' ') ptr++;
-        while (*ptr == ' ') ptr++;
+        ptr += consumed;
 
-        while (*ptr && *ptr != ' ') ptr++;
-        while (*ptr == ' ') ptr++;
-
-        fprintf(out,
-            "<path d=\"");
+        fprintf(out, "<path d=\"");
 
         int x, y;
         int first = 1;
+        int validPoints = 0;
 
-        while (sscanf(ptr, "%d,%d", &x, &y) == 2) {
-
+        while (sscanf(ptr, "%d,%d%n", &x, &y,&consumed) == 2) {
             if (first) {
                 fprintf(out, "M %d %d ", x, y);
                 first = 0;
@@ -342,17 +336,27 @@ void villiToSVG(const char *input_path, const char *output_path) {
                 fprintf(out, "L %d %d ", x, y);
             }
 
-            while (*ptr && *ptr != ' ') ptr++;
-            while (*ptr == ' ') ptr++;
+            validPoints++;
+
+            ptr += consumed;
+
+            while (*ptr == ' ')
+                ptr++;
         }
 
-        fprintf(out,
-            "Z\" "
-            "stroke=\"rgb(%d,%d,%d)\" "
-            "stroke-width=\"1.5\" "
-            "fill=\"rgb(%d,%d,%d)\"/>\n",
-            r, g, b,
-            r, g, b);
+        if (validPoints >= 2) {
+
+            fprintf(out,
+                "Z\" "
+                "stroke=\"rgb(%d,%d,%d)\" "
+                "stroke-width=\"1\" "
+                "fill=\"rgb(%d,%d,%d)\"/>\n",
+                r, g, b,
+                r, g, b);
+
+        } else {
+            fprintf(out, "\"/>\n");
+        }
     }
 
     fprintf(out, "</svg>\n");

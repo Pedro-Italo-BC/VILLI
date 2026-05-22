@@ -1,3 +1,4 @@
+#include "ift.h"
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
@@ -6,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ift.h"
 
 typedef struct VILLI_PIECE_OBJ {
     iftVoxel value;
@@ -19,7 +19,6 @@ typedef struct LIST_VILLI_PIECE_OBJ {
     int v_length;
     iftColor color;
 } LIST_VILLI_PIECE_OBJ;
-
 
 VILLI_PIECE_OBJ* villiCreatePieceObj(iftVoxel value);
 
