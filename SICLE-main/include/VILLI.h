@@ -16,8 +16,9 @@ typedef struct VILLI_PIECE_OBJ {
 typedef struct LIST_VILLI_PIECE_OBJ {
     VILLI_PIECE_OBJ *first;
     VILLI_PIECE_OBJ *last;
-    int v_length;
     iftColor color;
+    int v_length;
+    int layer;
     int id;
 } LIST_VILLI_PIECE_OBJ;
 
@@ -32,3 +33,5 @@ void villiDestructListPieceObj(LIST_VILLI_PIECE_OBJ *lvpobj);
 void villiAddPieceObj(LIST_VILLI_PIECE_OBJ* lvpobj, VILLI_PIECE_OBJ* vpobj);
 
 bool isVoxelEquals(iftVoxel v1, iftVoxel v2);
+
+void villiToSVG(const char *input_path, const char *output_path);

@@ -13,13 +13,13 @@
 
 void usage();
 
-void writeExpandedKPV(const char *path, iftVoxel **pieces, int *points_per_label, iftColor *colors, int labels_amount, int width, int height);
+void writeExpandedKPV(const char *path, iftVoxel **pieces, int *points_per_label, int *ids_per_label, iftColor *colors, int labels_amount, int width, int height);
 
 void readInputs(iftArgs *args, const char **kpv_path, double *upscale, const char **out_path);
 
 void villiResizePieceObj(iftVoxel *piece_obj, iftVoxel *new_piece_obj, int points_amount, double magnitude);
 
-iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int **points_per_label, iftColor **colors, int *width, int *height);
+iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int **points_per_label, int **ids_per_label, iftColor **colors, int *width, int *height);
 
 int main(int argc, char const *argv[])
 {
@@ -49,6 +49,7 @@ int main(int argc, char const *argv[])
     iftVoxel **pieces = NULL;
     iftVoxel **expanded = NULL;
     iftColor *colors = NULL;
+    int* ids_per_labels = NULL;
 
     readInputs(args, &kpv_path, &upscale, &out_path);
 
@@ -58,7 +59,7 @@ int main(int argc, char const *argv[])
     snprintf(kpv_path_name, sizeof(kpv_path_name), "%s.kpv", out_path);
     snprintf(svg_path_name, sizeof(svg_path_name), "%s.svg", out_path);
 
-    pieces = villiReadKpvFileVec(kpv_path, &labels_amount, &points_per_label, &colors, &width, &height);
+    pieces = villiReadKpvFileVec(kpv_path, &labels_amount, &points_per_label, &ids_per_labels, &colors, &width, &height);
 
     if (pieces == NULL) {
         fprintf(stderr, "Erro ao ler KPV\n");
@@ -101,11 +102,13 @@ int main(int argc, char const *argv[])
                 free(expanded[j]);
             }
 
-            free(pieces);
-            free(expanded);
-            free(points_per_label);
+                free(pieces);
+                free(expanded);
+                free(points_per_label);
+                free(colors);
+                free(ids_per_labels);
+                iftDestroyArgs(&args);
 
-            iftDestroyArgs(&args);
 
             return EXIT_FAILURE;
         }
@@ -113,7 +116,7 @@ int main(int argc, char const *argv[])
         villiResizePieceObj(pieces[i], expanded[i], n, upscale);
     }
 
-    writeExpandedKPV(kpv_path_name, expanded, points_per_label, colors, labels_amount, width, height);
+    writeExpandedKPV(kpv_path_name, expanded, points_per_label, ids_per_labels, colors, labels_amount, width, height);
     villiToSVG(kpv_path_name, svg_path_name);
     
     for (int i = 0; i < labels_amount; i++) {
@@ -125,6 +128,7 @@ int main(int argc, char const *argv[])
     free(expanded);
     free(points_per_label);
     free(colors);
+    free(ids_per_labels);
     iftDestroyArgs(&args);
 
     return EXIT_SUCCESS;
@@ -198,8 +202,7 @@ void villiResizePieceObj(iftVoxel *piece_obj, iftVoxel *new_piece_obj, int point
     }
 }
 
-
-void writeExpandedKPV(const char *path, iftVoxel **pieces, int *points_per_label, iftColor *colors, int labels_amount, int width, int height)
+void writeExpandedKPV(const char *path, iftVoxel **pieces, int *points_per_label, int *ids_per_leabel, iftColor *colors, int labels_amount,  int width, int height)
 {
     FILE *f = fopen(path, "w");
 
@@ -212,11 +215,13 @@ void writeExpandedKPV(const char *path, iftVoxel **pieces, int *points_per_label
 
     for (int i = 0; i < labels_amount; i++) {
 
-        fprintf(f, "1 %d,%d,%d %d ",
+        fprintf(f, "1 %d,%d,%d %d %d ",
             colors[i].val[0],
             colors[i].val[1],
             colors[i].val[2],
-            points_per_label[i]);
+            points_per_label[i],
+            ids_per_leabel[i]
+        );
 
         for (int j = 0; j < points_per_label[i]; j++) {
             fprintf(f, "%d,%d ", pieces[i][j].x, pieces[i][j].y);
@@ -228,7 +233,7 @@ void writeExpandedKPV(const char *path, iftVoxel **pieces, int *points_per_label
     fclose(f);
 }
 
-iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int **points_per_label, iftColor **colors, int *width, int *height)
+iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int **points_per_label, int **ids_per_label, iftColor **colors, int *width, int *height)
 {
     FILE *in = fopen(input_path, "r");
 
@@ -245,6 +250,7 @@ iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int *
     }
 
     *points_per_label = malloc(sizeof(int) * (*labels_amount));
+    *ids_per_label = malloc(sizeof(int) * (*labels_amount));
     *colors = malloc(sizeof(iftColor) * (*labels_amount));
 
     if (*points_per_label == NULL || *colors == NULL) {
@@ -280,16 +286,17 @@ iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int *
         int b = 0;
         int pointsAmount = 0;
         int consumed = 0;
-
+        int id = 0;
         char *ptr = line;
 
-        if (sscanf(ptr, "%d %d,%d,%d %d%n", &thickness, &r, &g, &b, &pointsAmount, &consumed) != 5) {
+        if (sscanf(ptr, "%d %d,%d,%d %d %d%n", &thickness, &r, &g, &b, &pointsAmount, &id, &consumed) != 6) {
             continue;
         }
 
         ptr += consumed;
 
         (*points_per_label)[index] = pointsAmount;
+        (*ids_per_label)[index] = id;
 
         (*colors)[index].val[0] = r;
         (*colors)[index].val[1] = g;
@@ -349,101 +356,4 @@ iftVoxel **villiReadKpvFileVec(const char *input_path, int *labels_amount, int *
     fclose(in);
 
     return vListPiece;
-}
-
-void villiToSVG(const char *input_path, const char *output_path)
-{
-    FILE *in = fopen(input_path, "r");
-    FILE *out = fopen(output_path, "w");
-
-    if (!in || !out) {
-        fprintf(stderr, "Erro ao abrir arquivos\n");
-
-        if (in) fclose(in);
-        if (out) fclose(out);
-
-        return;
-    }
-
-    int width, height, nLabels;
-
-    if (fscanf(in, "%d,%d,%d\n",
-               &width,
-               &height,
-               &nLabels) != 3) {
-
-        fprintf(stderr, "Erro ao ler cabeçalho\n");
-
-        fclose(in);
-        fclose(out);
-
-        return;
-    }
-
-    fprintf(out,
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-        "width=\"%d\" height=\"%d\" "
-        "viewBox=\"0 0 %d %d\">\n",
-        width, height,
-        width, height);
-
-    char line[65536];
-
-    while (fgets(line, sizeof(line), in)) {
-
-        int thickness;
-        int r, g, b;
-        int pointsAmount;
-
-        char *ptr = line;
-
-        int consumed = 0;
-
-        if (sscanf(ptr, "%d %d,%d,%d %d%n", &thickness, &r, &g, &b, &pointsAmount, &consumed) != 5) {
-            continue;
-        }
-
-        ptr += consumed;
-
-        fprintf(out, "<path d=\"");
-
-        int x, y;
-        int first = 1;
-        int validPoints = 0;
-
-        while (sscanf(ptr, "%d,%d%n", &x, &y,&consumed) == 2) {
-            if (first) {
-                fprintf(out, "M %d %d ", x, y);
-                first = 0;
-            } else {
-                fprintf(out, "L %d %d ", x, y);
-            }
-
-            validPoints++;
-
-            ptr += consumed;
-
-            while (*ptr == ' ')
-                ptr++;
-        }
-
-        if (validPoints >= 2) {
-
-            fprintf(out,
-                "Z\" "
-                "stroke=\"rgb(%d,%d,%d)\" "
-                "stroke-width=\"1\" "
-                "fill=\"rgb(%d,%d,%d)\"/>\n",
-                r, g, b,
-                r, g, b);
-
-        } else {
-            fprintf(out, "\"/>\n");
-        }
-    }
-
-    fprintf(out, "</svg>\n");
-
-    fclose(in);
-    fclose(out);
 }
