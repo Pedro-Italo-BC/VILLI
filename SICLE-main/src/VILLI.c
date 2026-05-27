@@ -3,11 +3,13 @@
 #include <stdlib.h>
 
 VILLI_PIECE_OBJ* villiCreatePieceObj(iftVoxel value) {
-    VILLI_PIECE_OBJ* nvpobj =
-        (VILLI_PIECE_OBJ*) malloc(sizeof(VILLI_PIECE_OBJ));
+    VILLI_PIECE_OBJ* nvpobj = (VILLI_PIECE_OBJ*) malloc(sizeof(VILLI_PIECE_OBJ));
 
     assert(nvpobj != NULL);
-    if (nvpobj == NULL) return NULL;
+    
+    if (nvpobj == NULL)  {
+        return NULL;
+    }
 
     nvpobj->value = value;
     nvpobj->next = NULL;
@@ -22,11 +24,12 @@ void villiDestructPieceObj(VILLI_PIECE_OBJ* vpobj) {
 }
 
 LIST_VILLI_PIECE_OBJ* villiCreateListPieceObj(iftColor color) {
-    LIST_VILLI_PIECE_OBJ *nlvpobj =
-        (LIST_VILLI_PIECE_OBJ*) malloc(sizeof(LIST_VILLI_PIECE_OBJ));
+    LIST_VILLI_PIECE_OBJ *nlvpobj = (LIST_VILLI_PIECE_OBJ*) malloc(sizeof(LIST_VILLI_PIECE_OBJ));
 
     assert(nlvpobj != NULL);
-    if (nlvpobj == NULL) return NULL;
+    if (nlvpobj == NULL) {
+        return NULL;
+    }
 
     nlvpobj->first = NULL;
     nlvpobj->last  = NULL;
@@ -37,7 +40,9 @@ LIST_VILLI_PIECE_OBJ* villiCreateListPieceObj(iftColor color) {
 }
 
 void villiDestructListPieceObj(LIST_VILLI_PIECE_OBJ *lvpobj) {
-    if (lvpobj == NULL) return;
+    if (lvpobj == NULL) {
+        return;
+    }
 
     VILLI_PIECE_OBJ* current = lvpobj->first;
 
@@ -50,11 +55,10 @@ void villiDestructListPieceObj(LIST_VILLI_PIECE_OBJ *lvpobj) {
     free(lvpobj);
 }
 
-void villiAddPieceObj(
-    LIST_VILLI_PIECE_OBJ* lvpobj,
-    VILLI_PIECE_OBJ* vpobj
-) {
-    if (lvpobj == NULL || vpobj == NULL) return;
+void villiAddPieceObj(LIST_VILLI_PIECE_OBJ* lvpobj, VILLI_PIECE_OBJ* vpobj) {
+    if (lvpobj == NULL || vpobj == NULL) {
+        return;
+    }
 
     vpobj->next = NULL;
 
@@ -70,9 +74,7 @@ void villiAddPieceObj(
 }
 
 bool isVoxelEquals(iftVoxel v1, iftVoxel v2) {
-    return (v1.x == v2.x &&
-            v1.y == v2.y &&
-            v1.z == v2.z);
+    return (v1.x == v2.x && v1.y == v2.y && v1.z == v2.z);
 }
 
 void villiToSVG(const char *input_path, const char *output_path)
@@ -91,16 +93,13 @@ void villiToSVG(const char *input_path, const char *output_path)
 
     int width, height, nLabels;
 
-    if (fscanf(in, "%d,%d,%d\n",
-               &width,
-               &height,
-               &nLabels) != 3) {
-
+    if (fscanf(in, "%d,%d,%d\n", &width, &height, &nLabels) != 3) {
+        
         fprintf(stderr, "Erro ao ler cabeçalho\n");
-
+        
         fclose(in);
         fclose(out);
-
+        
         return;
     }
 
@@ -115,9 +114,9 @@ void villiToSVG(const char *input_path, const char *output_path)
 
     while (fgets(line, sizeof(line), in)) {
 
-        int thickness;
-        int r, g, b;
-        int pointsAmount;
+        int thickness = 0;
+        int r = 0, g = 0, b = 0;
+        int pointsAmount = 0;
 
         char *ptr = line;
 
@@ -135,7 +134,7 @@ void villiToSVG(const char *input_path, const char *output_path)
 
         fprintf(out, "<path d=\"");
 
-        int x, y;
+        int x = 0, y = 0;
         int first = 1;
         int validPoints = 0;
 
@@ -151,12 +150,12 @@ void villiToSVG(const char *input_path, const char *output_path)
 
             ptr += consumed;
 
-            while (*ptr == ' ')
+            while (*ptr == ' '){
                 ptr++;
+            }
         }
 
         if (validPoints >= 2) {
-
             fprintf(out,
                 "Z\" "
                 "stroke=\"rgb(%d,%d,%d)\" "
