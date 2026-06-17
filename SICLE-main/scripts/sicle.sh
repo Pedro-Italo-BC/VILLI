@@ -2,7 +2,7 @@
 
 # Paths
 
-NAME="rukia"
+NAME="Skebob!"
 
 INPUT="../assets/INPUT/${NAME}.jpeg"
 
@@ -23,19 +23,19 @@ SCALE="0.6"
 # SICLE CONFIGS
 
 #EXTREME DETAIL CONFIG
+
+
 ../bin/RunSICLE \
-  --img "$INPUT" \
+--img "$INPUT" \
   --out "$OUTPUT" \
-  --conn-opt fmax \
+  --conn-opt fsum \
+  --n0 8000 \
+  --nf 2000 --irreg 0.5
   # --crit-opt spread \
   # --multiscale \
-  --alpha 1.0 \
-  # --irreg 0.0 
   # --adhr 30 \
-  --n0 20000 \
-  --nf 8000
 
-# BALANCED DETAIL CONFIG
+# BALANCED
 # ../bin/RunSICLE \
 #   --img "$INPUT" \
 #   --out "$OUTPUT" \
@@ -50,7 +50,7 @@ SCALE="0.6"
 #   --n0 4000 \
 #   --nf 1200
 
-# SMOOTH / ROUNDED SUPERPIXELS CONFIG
+# SMOOTH
 # ../bin/RunSICLE \
 #   --img "$INPUT" \
 #   --out "$OUTPUT" \
@@ -67,6 +67,12 @@ SCALE="0.6"
 
 # VILLI
 
+
+../bin/RunOvlayBorders \
+  --img "$INPUT" \
+  --labels "$INPUT_L" \
+  --out "../assets/SVG/Border.png" 
+
 ../bin/RunVILLI \
   --img "$INPUT" \
   --labels "$INPUT_L" \
@@ -75,10 +81,10 @@ SCALE="0.6"
 
 # VILLI UPSCALE
 
-../bin/RunVILLIUpscale \
-  --kpv "$INPUT_UPS" \
-  --upscale "$SCALE" \
-  --out "$OUTPUT_UPS"
+# ../bin/RunVILLIUpscale \
+#   --kpv "$INPUT_UPS" \
+#   --upscale "$SCALE" \
+#   --out "$OUTPUT_UPS"
 
 
 echo ""
