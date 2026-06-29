@@ -2,9 +2,9 @@
 
 # Paths
 
-NAME="Skebob!"
+NAME="Aba"
 
-INPUT="../assets/INPUT/${NAME}.jpeg"
+INPUT="../assets/INPUT/${NAME}.png"
 
 OUTPUT="../assets/LABEL/${NAME}_label.png"
 
@@ -16,10 +16,6 @@ INPUT_UPS="../assets/SVG/${NAME}_k.kpv"
 
 OUTPUT_UPS="../assets/SVG/${NAME}_ups"
 
-# Upscale factor
-
-SCALE="0.6"
-
 # SICLE CONFIGS
 
 #EXTREME DETAIL CONFIG
@@ -30,7 +26,7 @@ SCALE="0.6"
   --out "$OUTPUT" \
   --conn-opt fsum \
   --n0 8000 \
-  --nf 2000 --irreg 0.5
+  --nf 4000 --irreg 0.5
   # --crit-opt spread \
   # --multiscale \
   # --adhr 30 \
@@ -78,14 +74,6 @@ SCALE="0.6"
   --labels "$INPUT_L" \
   --out "$OUTPUT_KPV" \
   --keepScratch
-
-# VILLI UPSCALE
-
-# ../bin/RunVILLIUpscale \
-#   --kpv "$INPUT_UPS" \
-#   --upscale "$SCALE" \
-#   --out "$OUTPUT_UPS"
-
 
 echo ""
 echo "=========================================="

@@ -113,31 +113,37 @@ bool isBorderVoxel(iftImage *label_img, int p_idx) {
     return resp;
 }
 
-LIST_VILLI_PIECE_OBJ* traceBorder(iftImage *label_img, int start_pixel, int label) {
-    int dx[8] = {1, 1, 0,-1,-1,-1, 0, 1}; 
+
+
+LIST_VILLI_PIECE_OBJ* traceBorder(iftImage *label_img, int start_pixel, int label)
+{
+    int dx[8] = {1, 1, 0,-1,-1,-1, 0, 1};
     int dy[8] = {0, 1, 1, 1, 0,-1,-1,-1};
 
     LIST_VILLI_PIECE_OBJ *list = villiCreateListPieceObj((iftColor){0});
 
     iftVoxel start = iftGetVoxelCoord(label_img, start_pixel);
     iftVoxel current = start;
-   
+
     int direction = 0;
     list->layer = start.z;
 
     bool neighbor_found = false;
-    int  start_direction = -1;
-    int  start_visit_count = 0;
-    int  security_max_steps = label_img->xsize * label_img->ysize; 
-    int  steps = 0;
+    int start_direction = -1;
+    int start_visit_count = 0;
+    int security_max_steps = label_img->xsize * label_img->ysize;
+    int steps = 0;
 
     do {
-        villiAddPieceObj(list, villiCreatePieceObj(current));
+
         neighbor_found = false;
         steps++;
 
-        for(int i = 0; !neighbor_found && i < 8; i++) {
-            int ndir = (direction + i) % 8;
+        int ndir = 0;
+
+        for (int i = 0; !neighbor_found && i < 8; i++) {
+
+            ndir = (direction + i) % 8;
 
             iftVoxel next = {
                 current.x + dx[ndir],
@@ -145,26 +151,42 @@ LIST_VILLI_PIECE_OBJ* traceBorder(iftImage *label_img, int start_pixel, int labe
                 current.z
             };
 
-            if(iftValidVoxel(label_img, next)) {
+            if (iftValidVoxel(label_img, next)) {
+
                 int idx = iftGetVoxelIndex(label_img, next);
 
-                if(label_img->val[idx] == label) {
+                if (label_img->val[idx] == label) {
+
+                    villiAddPieceObj(
+                        list,
+                        villiCreatePieceObj(current, ndir)
+                    );
+
                     current = next;
+
                     direction = (ndir + 6) % 8;
+
                     neighbor_found = true;
 
-                    if(current.x == start.x && current.y == start.y && current.z == start.z) {
-                        if(start_direction == -1) {
+                    if (current.x == start.x &&
+                        current.y == start.y &&
+                        current.z == start.z)
+                    {
+                        if (start_direction == -1) {
                             start_direction = direction;
-                        } else if(direction == start_direction) {
+                        } else if (direction == start_direction) {
                             start_visit_count = 2;
-                        } 
+                        }
                     }
                 }
             }
         }
 
-    } while(neighbor_found && start_visit_count < 2 && steps < security_max_steps);
+    } while (
+        neighbor_found &&
+        start_visit_count < 2 &&
+        steps < security_max_steps
+    );
 
     return list;
 }
@@ -254,7 +276,7 @@ void writeVilliFile(const char *path, LIST_VILLI_PIECE_OBJ **lists, int nlabels,
         VILLI_PIECE_OBJ *cur = l->first;
 
         while(cur != NULL) {
-            fprintf(f, "%d,%d ", cur->value.x, cur->value.y);
+            fprintf(f, "%d,%d,%d ", cur->value.x, cur->value.y, cur->orientation);
             cur = cur->next;
         }
 
